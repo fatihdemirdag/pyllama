@@ -1,1 +1,1 @@
-.venv/Scripts/python pyllama.py
+"./.venv/Scripts/python" pyllama.py

@@ -36,8 +36,8 @@ def format_model_details(model):
     return {
         "Name": model.get("name", ""),
         "Family": family,
-        "Parameter Size": param_size_display,
-        "Quantization Level": quant_level,
+        "Param. Size": param_size_display,
+        "Quant. Lvl": quant_level,
         "Size": f"{size} GB",
     }
 
