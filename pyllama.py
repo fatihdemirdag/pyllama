@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 import ollama
 import requests
 from tabulate import tabulate
@@ -36,14 +39,14 @@ def format_model_details(model):
     return {
         "Name": model.get("name", ""),
         "Family": family,
-        "Param. Size": param_size_display,
-        "Quant. Lvl": quant_level,
+        "Parameter Size": param_size_display,
+        "Quantization Level": quant_level,
         "Size": f"{size} GB",
     }
 
 
 def print_model_menu(models):
-    headers = ["Index", "Name", "Family", "Parameter Size", "Quantization Level", "Size"]
+    headers = ["Index", "Name", "Family", "Param. Size", "Quant. Lvl", "Size"]
     table_data = []
 
     for index, model in enumerate(models, start=1):
@@ -86,7 +89,7 @@ def write_to_model_file(model_name, original_model_name, parameters):
     with open(f"{model_name}", "w") as file:
         file.write(f"FROM {original_model_name}\n")
         for key, value in parameters.items():
-            file.write(f"{key}={value}\n")
+            file.write(f"PARAMETER {key} {value}\n")
 
 
 def create_ollama_model_with_config(model_name, config_file):
@@ -128,10 +131,40 @@ def secondary_menu(selected_model):
 def run_model(model_name):
     print(f"Running model: {model_name}")
     user_prompt = ""
-    while user_prompt.lower()!= "exit":
-        user_prompt = input("Enter a prompt> ")
-        for chunk in ollama.chat(model=model_name, messages=[{"role": "user", "content": user_prompt}], stream=True):
-            print(chunk["message"]["content"], end="", flush=True)
+
+    # Create a log file with current date and time
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file_path = os.path.join(log_dir, f"Session_{current_time}.log")
+
+    try:
+        with open(log_file_path, "w", encoding="utf-8") as log_file:
+            while user_prompt.lower() != "exit":
+                user_prompt = input("\n\n\nEnter a prompt > ")
+
+                # Log the user prompt
+                log_file.write(f"User: {user_prompt}\n")
+                log_file.flush()  # Ensure the prompt is written immediately
+
+                # Log the model's response
+                log_file.write("Assistant: ")
+                for chunk in ollama.chat(model=model_name, messages=[{"role": "user", "content": user_prompt}],
+                                         stream=True):
+                    content = chunk["message"]["content"]
+                    print(content, end="", flush=True)
+                    log_file.write(content)
+                    log_file.flush()  # Continuously save the response
+
+                log_file.write("\n--------------------------------------------------------------------------------\n")
+                log_file.flush()
+
+                print("\n--------------------------------------------------------------------------------")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # The log file will be saved up to the point of the error due to continuous flushing
+    finally:
+        print(f"Session log saved to: {log_file_path}")
 
 
 def show_model_details(model_name):
